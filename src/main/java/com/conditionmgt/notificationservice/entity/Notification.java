@@ -18,6 +18,9 @@ public class Notification {
     @Id
     @GeneratedValue
     private int notificationId;
-    private String notificationMsg;
-    private String notificationStatus;
+    //private String notificationMsg;
+   // private String notificationStatus;
+
+    private String conditionDetails;
+    private String test;
 }
