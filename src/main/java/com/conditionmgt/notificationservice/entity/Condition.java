@@ -17,14 +17,6 @@ public class Condition implements Serializable {
         this.conditionDetails = conditionDetails;
     }
 
-    /*public String getConditionName() {
-        return conditionName;
-    }
-
-    public void setConditionName(String conditionName) {
-        this.conditionName = conditionName;
-    }*/
-
     @JsonAnyGetter
     public Map<String, Object> getConditionDetails() {
         return conditionDetails;
@@ -34,15 +26,4 @@ public class Condition implements Serializable {
         this.conditionDetails.put(key, val);
     }
 
-
-
-    /*@JsonAnyGetter
-    public Map<String, String> getConditionDetails(){
-        return conditionDetails;
-    }
-
-    @JsonAnySetter
-    public void setConditionDetails(String key, String value){
-        this.conditionDetails.put(key, value);
-    }*/
 }

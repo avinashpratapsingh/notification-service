@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,29 +125,23 @@ public class NotificationController {
             stmt.executeUpdate(sql);
           //  }
             for(Map.Entry<String, Object> colPair : map.entrySet()) {
-               // for(int i= 0 ; i<colPair.getValue();i++){
                 LinkedHashMap<String,Object> obj = (LinkedHashMap)colPair.getValue();
                 String conditionName = colPair.getKey();
-                //sql = "ALTER TABLE notification." + tableName + " "+"ADD " + conditionName + " VARCHAR(30)";
-                sql = "INSERT INTO notification." + tableName+" (ConditionName) values"+"("+conditionName+")";
+                sql = "INSERT INTO notification." + tableName+" (ConditionName) values"+"(\""+conditionName+"\")";
                 stmt.executeUpdate(sql);
 
                 for(Map.Entry<String, Object> colPair1 : obj.entrySet())
                 {
                     LinkedHashMap<String,Object> obj2 = (LinkedHashMap)colPair.getValue();
-                   // for(Map.Entry<String, Object> colPair2 : obj2.entrySet()){
-                    //colPair1.getValue();
                     String colname = conditionName + "_" + colPair1.getKey();
-                    sql = "ALTER TABLE notification." + tableName + " "+"ADD " + colname + " VARCHAR(30)";
+                    sql = "ALTER TABLE notification." + tableName + " "+"ADD " + colname + " VARCHAR(30) ";
 
                     stmt.executeUpdate(sql);
                     System.out.println("Altered table with new coloums");
-                    //}
                 }
                 for(Map.Entry<String, Object> colPair1 : obj.entrySet())
                 { String colname = conditionName + "_" + colPair1.getKey();
-
-                sql = "INSERT INTO notification." + tableName+"("+colname+") values"+"("+colPair1.getValue()+")";
+                    sql = "UPDATE notification." + tableName+" SET "+ colname+"="+"("+colPair1.getValue()+")"+"Where ConditionName ="+"\""+conditionName+"\"";
                     stmt.executeUpdate(sql);
                 }
 
@@ -199,7 +194,7 @@ public class NotificationController {
         }
 
     @GetMapping (value = "/getConditionfromDB",produces = { "application/json" })
-    public String[] getConditionfromDB() throws Exception{
+    public String getConditionfromDB() throws Exception{
 
         Connection conn = null;
         Statement stmt = null;
@@ -211,48 +206,39 @@ public class NotificationController {
         System.out.println(
                 "List of column names in the current table: ");
 
-        // Retrieving the list of column names
-        int count = rsMetaData.getColumnCount();
-
-        for (int i = 1; i<= count; i++) {
-            System.out.print(rsMetaData.getColumnName(i)
-                    + "\t");
-        }
-        JSONArray json = new JSONArray();
-        ResultSetMetaData rsmd = rs1.getMetaData();
-        while(rs1.next()) {
-            int numColumns = rsmd.getColumnCount();
-            JSONObject obj = new JSONObject();
-            for (int i=1; i<=numColumns; i++) {
-                String column_name = rsmd.getColumnName(i);
-                obj.put(column_name, rs1.getObject(column_name));
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode conditionDetails = mapper.createObjectNode();
+        List<Map<String, Object>> rows = resultSetToList(rs1);
+        String conditionKey ="";
+        for (Map<String, Object> row:rows) {
+            ObjectNode details = mapper.createObjectNode();
+            for (Map.Entry<String, Object> rowEntry : row.entrySet()) {
+                if(null != rowEntry.getKey() && rowEntry.getKey().equals("ConditionName"))
+                    conditionKey= rowEntry.getValue().toString();
+                System.out.print(rowEntry.getKey() + " = " + rowEntry.getValue() + ", ");
+                if(null !=rowEntry.getValue() && null != rowEntry.getKey()){
+                    if(null != rowEntry.getKey() && !rowEntry.getKey().equals("ConditionName")){
+                        details.put(rowEntry.getKey().replace(rowEntry.getKey()+"_",""),rowEntry.getValue().toString());
+                    }
+                }
             }
-            json.put(obj);
+            conditionDetails.set(conditionKey,details);
         }
-
-
-       /* while(rs1.next())
-        {
-            int empNum = rs1.getInt(1);
-            String lastName = rs1.getString(2);
-            String firstName = rs1.getString(3);
-            String email = rs1.getString(4);
-            String deptNum = rs1.getString(5);
-            String salary = rs1.getString(6);
-            System.out.println(empNum + "," +lastName+ "," +firstName+ "," +email +","+deptNum +"," +salary);
-        }*/
-       // conn.commit();
-       // conn.close();
-        List<String> list = new ArrayList<String>();
-        for(int i=0; i < json.length(); i++) {
-            list.add(json.getString(i));
-        }
-        String[] stringArray = list.toArray(new String[list.size()]);
-        //System.out.print("String Array: ");
-        for(String str : stringArray) {
-            System.out.print(str);
-        }
-        return stringArray;
+        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(conditionDetails);
+        return json;
     }
 
+    private List<Map<String, Object>> resultSetToList(ResultSet rs) throws SQLException {
+        ResultSetMetaData md = rs.getMetaData();
+        int columns = md.getColumnCount();
+        List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
+        while (rs.next()){
+            Map<String, Object> row = new HashMap<String, Object>(columns);
+            for(int i = 1; i <= columns; ++i){
+                row.put(md.getColumnName(i), rs.getObject(i));
+            }
+            rows.add(row);
+        }
+        return rows;
+    }
 }
